@@ -20,10 +20,29 @@ export const generateOptionsSchema: z.ZodObject<
     /** File format (default: "json", options: "json" | "csv") */
     format: z.ZodDefault<z.ZodEnum<["json", "csv"]>>;
     /**
-     * Fields to check for duplicates
-     * (default: false, options: false | string | string[])
+     * Duplicate detection configuration
+     * (default: null)
      */
-    dupeCheck: z.ZodDefault<
+    duplicates: z.ZodDefault<
+      z.ZodUnion<
+        [
+          z.ZodNull,
+          z.ZodObject<
+            {
+              /** Fields to check for duplicates */
+              values: z.ZodArray<z.ZodString>;
+              /** Fuzzy matching threshold (0-1, lower is stricter) */
+              threshold: z.ZodOptional<z.ZodNumber>;
+            },
+            "strict"
+          >
+        ]
+      >
+    >;
+    /**
+     * @deprecated Use duplicates object instead
+     */
+    dupeCheck?: z.ZodOptional<
       z.ZodUnion<[z.ZodString, z.ZodArray<z.ZodString>, z.ZodLiteral<false>]>
     >;
   },
@@ -44,9 +63,21 @@ export const generateOptionsSchema: z.ZodObject<
 
     format: z.enum(["json", "csv"]).default("json"),
 
+    duplicates: z
+      .union([
+        z.null(),
+        z
+          .object({
+            values: z.array(z.string()),
+            threshold: z.number().min(0).max(1).optional(),
+          })
+          .strict(),
+      ])
+      .default(null),
+
     dupeCheck: z
       .union([z.string(), z.array(z.string()), z.literal(false)])
-      .default(false),
+      .optional(),
   })
   .strict();
 
@@ -55,6 +86,16 @@ export const generateOptionsSchema: z.ZodObject<
  * for each record using the typed record schema
  */
 export type CustomValueOrFunction<T, R> = R | ((record: T) => R);
+
+/**
+ * Duplicate detection configuration
+ */
+export interface DuplicatesConfig {
+  /** Fields to check for duplicates */
+  values: string[];
+  /** Fuzzy matching threshold (0-1, lower is stricter, default: 0.3) */
+  threshold?: number;
+}
 
 /**
  * Options for the generate method with typed custom values
@@ -83,7 +124,15 @@ export interface GenerateOptions<
   outputPath?: string;
   /** File format (default: "json", options: "json" | "csv") */
   format?: "json" | "csv";
-  /** Fields to check for duplicates (default: false) */
+  /**
+   * Configuration for duplicate detection
+   * @example { values: ["name", "email"], threshold: 0.2 }
+   */
+  duplicates?: DuplicatesConfig | null;
+  /**
+   * @deprecated Use duplicates object instead
+   * Fields to check for duplicates (default: false)
+   */
   dupeCheck?: string | string[] | false;
 }
 

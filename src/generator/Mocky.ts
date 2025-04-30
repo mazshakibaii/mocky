@@ -79,8 +79,20 @@ export class Mocky<S extends ZodTypeAny = ZodTypeAny> {
       count,
       customValues,
       batchSize,
+      duplicates,
       dupeCheck,
     } = generateOpts;
+
+    // For backward compatibility, if dupeCheck is provided but duplicates is not customized
+    // create a duplicates object from dupeCheck
+    const effectiveDuplicateConfig =
+      dupeCheck !== undefined
+        ? dupeCheck === false
+          ? null
+          : {
+              values: Array.isArray(dupeCheck) ? dupeCheck : [dupeCheck],
+            }
+        : duplicates;
 
     // Track start time for timing data
     const startTime = Date.now();
@@ -94,17 +106,17 @@ export class Mocky<S extends ZodTypeAny = ZodTypeAny> {
     let totalCompletionTokens = 0;
 
     // Track duplicate values by field
-    const duplicates: Record<string, string[]> = {};
-    const dupeCheckFields =
-      dupeCheck === false
-        ? []
-        : Array.isArray(dupeCheck)
-        ? dupeCheck
-        : [dupeCheck];
+    const duplicatesMap: Record<string, string[]> = {};
+
+    // Extract fields to check from the effective duplicate config
+    const fieldsToCheck =
+      effectiveDuplicateConfig && "values" in effectiveDuplicateConfig
+        ? (effectiveDuplicateConfig as { values: string[] }).values
+        : [];
 
     // Initialize duplicate tracking for each field
-    dupeCheckFields.forEach((field) => {
-      duplicates[field] = [];
+    fieldsToCheck.forEach((field) => {
+      duplicatesMap[field] = [];
     });
 
     // Show custom values if provided
@@ -123,10 +135,8 @@ Model:              ${this.opts.llm.model}
 
 Custom values:      ${customValueKeys.length > 0 ? "Yes" : "N/A"}
 Duplicate check:    ${
-        dupeCheck !== false
-          ? Array.isArray(dupeCheck)
-            ? dupeCheck.join(", ")
-            : dupeCheck
+        effectiveDuplicateConfig && "values" in effectiveDuplicateConfig
+          ? fieldsToCheck.join(", ")
           : "N/A"
       }`,
       "Configuration"
@@ -223,17 +233,17 @@ Duplicate check:    ${
       let newRecords: z.infer<S>[] = [];
       for (const batch of batches) {
         // Capture duplicates before filtering
-        if (dupeCheck !== false) {
+        if (effectiveDuplicateConfig && "values" in effectiveDuplicateConfig) {
           batch.forEach((record) => {
-            dupeCheckFields.forEach((field) => {
+            fieldsToCheck.forEach((field) => {
               if (
                 field in record &&
                 typeof record[field as keyof typeof record] === "string" &&
                 isDuplicate(record, this.generatedData, field)
               ) {
                 const value = record[field as keyof typeof record] as string;
-                if (!duplicates[field].includes(value)) {
-                  duplicates[field].push(value);
+                if (!duplicatesMap[field].includes(value)) {
+                  duplicatesMap[field].push(value);
                 }
               }
             });
@@ -243,7 +253,7 @@ Duplicate check:    ${
         const uniqueRecords = filterDuplicates(
           batch,
           this.generatedData,
-          dupeCheck
+          effectiveDuplicateConfig
         );
         newRecords = [...newRecords, ...uniqueRecords];
       }
@@ -370,7 +380,7 @@ Batch failures:      ${totalBatchFailures} records`,
         totalTime: totalSeconds,
         avgTimePerRecord: avgSecondsPerRecord,
       },
-      duplicates,
+      duplicates: duplicatesMap,
     };
   }
 }
