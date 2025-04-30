@@ -4,7 +4,7 @@ import * as cliProgress from "cli-progress";
 import chalk from "chalk";
 import { saveOutput } from "../lib/saveOutput";
 import { generateBatch } from "./utils/batchGenerator";
-import { filterDuplicates } from "./utils/duplicateUtils";
+import { filterDuplicates, isDuplicate } from "./utils/duplicateUtils";
 import { applyCustomValues } from "./utils/customValues";
 import {
   mockyOptionsSchema,
@@ -53,11 +53,24 @@ export class Mocky<S extends ZodTypeAny = ZodTypeAny> {
    * @param options.outputPath Where to write output (default: "./output.json")
    * @param options.format File format (default: "json")
    * @param options.dupeCheck Fields to check for duplicates (default: false)
-   * @returns Array of generated records with custom values applied
+   * @returns Object containing generated data, usage information, and duplicates information
    */
   public async generate<
     C extends Record<string, unknown> = Record<string, never>
-  >(options: GenerateOptions<C, z.infer<S>> = {}): Promise<(z.infer<S> & C)[]> {
+  >(
+    options: GenerateOptions<C, z.infer<S>> = {}
+  ): Promise<{
+    data: (z.infer<S> & C)[];
+    usage: {
+      promptTokens: number;
+      completionTokens: number;
+      totalTokens: number;
+      estimatedCost: number | null;
+      totalTime: number;
+      avgTimePerRecord: number;
+    };
+    duplicates: Record<string, string[]>;
+  }> {
     const generateOpts = generateOptionsSchema.parse(options);
     const {
       format,
@@ -79,6 +92,20 @@ export class Mocky<S extends ZodTypeAny = ZodTypeAny> {
     // Track token usage for cost calculation
     let totalPromptTokens = 0;
     let totalCompletionTokens = 0;
+
+    // Track duplicate values by field
+    const duplicates: Record<string, string[]> = {};
+    const dupeCheckFields =
+      dupeCheck === false
+        ? []
+        : Array.isArray(dupeCheck)
+        ? dupeCheck
+        : [dupeCheck];
+
+    // Initialize duplicate tracking for each field
+    dupeCheckFields.forEach((field) => {
+      duplicates[field] = [];
+    });
 
     // Show custom values if provided
     const customValueKeys = Object.keys(customValues);
@@ -192,9 +219,27 @@ Duplicate check:    ${
         0
       );
 
-      // Process duplicates
+      // Process duplicates and track them
       let newRecords: z.infer<S>[] = [];
       for (const batch of batches) {
+        // Capture duplicates before filtering
+        if (dupeCheck !== false) {
+          batch.forEach((record) => {
+            dupeCheckFields.forEach((field) => {
+              if (
+                field in record &&
+                typeof record[field as keyof typeof record] === "string" &&
+                isDuplicate(record, this.generatedData, field)
+              ) {
+                const value = record[field as keyof typeof record] as string;
+                if (!duplicates[field].includes(value)) {
+                  duplicates[field].push(value);
+                }
+              }
+            });
+          });
+        }
+
         const uniqueRecords = filterDuplicates(
           batch,
           this.generatedData,
@@ -314,7 +359,19 @@ Batch failures:      ${totalBatchFailures} records`,
       `Successfully saved ${count} records to ${outputPath} in ${format} format`
     );
 
-    return this.generatedData;
+    // Return an object containing the generated data, usage info, and duplicates
+    return {
+      data: this.generatedData,
+      usage: {
+        promptTokens: totalPromptTokens,
+        completionTokens: totalCompletionTokens,
+        totalTokens: totalPromptTokens + totalCompletionTokens,
+        estimatedCost: totalCost,
+        totalTime: totalSeconds,
+        avgTimePerRecord: avgSecondsPerRecord,
+      },
+      duplicates,
+    };
   }
 }
 
