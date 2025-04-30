@@ -1,6 +1,6 @@
 {
   "name": "mocky-ai",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "author": "Maziar Shakibaii",
   "license": "MIT",
   "description": "AI-powered mock data generation with Zod schema validation and duplicate detection.",
@@ -9,7 +9,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "bunup src/index.ts --format esm,cjs --dts",
+    "build": "bunup src/index.ts --format esm,cjs --dts --minify",
     "test": "bun test",
     "lint": "bun run eslint .",
     "format": "bun run prettier ."
