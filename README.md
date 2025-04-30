@@ -48,7 +48,7 @@ const productReviewSchema = z.object({
   userId: z.string().uuid(),
   createdAt: z.string().datetime(),
   rating: z.number().int().min(1).max(5),
-  
+
   // Fields where LLM adds unique value (complex, contextual data)
   productName: z.string(),
   reviewTitle: z.string(),
@@ -72,15 +72,16 @@ const mocky = createMocky({
 
 // 3. Generate mock data
 async function generateProductReviews() {
-  const reviews = await mocky.generate({
+  const result = await mocky.generate({
     count: 50, // Number of records to generate
     concurrency: 5, // Number of concurrent batch operations
     batchSize: 10, // Records per batch
     outputPath: "./product-reviews.json", // Where to save the output
     format: "json", // "json" or "csv"
     dupeCheck: ["reviewTitle", "reviewText"], // Fields to check for duplicates
-    prompt: "Generate realistic product reviews for consumer electronics like smartphones, laptops, and headphones. Include specific details about features, performance, and user experience.",
-    
+    prompt:
+      "Generate realistic product reviews for consumer electronics like smartphones, laptops, and headphones. Include specific details about features, performance, and user experience.",
+
     // Use custom values for fields better generated without LLM
     customValues: {
       id: () => faker.string.uuid(),
@@ -91,7 +92,21 @@ async function generateProductReviews() {
     },
   });
 
+  const { data: reviews, usage, duplicates } = result;
+
   console.log(`Generated ${reviews.length} unique product reviews`);
+  console.log(
+    `Used ${usage.totalTokens} tokens (estimated cost: ${
+      usage.estimatedCost !== null
+        ? "$" + usage.estimatedCost.toFixed(4)
+        : "N/A"
+    })`
+  );
+  console.log(
+    `Found duplicates in: ${Object.keys(duplicates)
+      .map((field) => `${field} (${duplicates[field].length})`)
+      .join(", ")}`
+  );
 }
 
 generateProductReviews().catch(console.error);
@@ -124,46 +139,58 @@ import { faker } from "@faker-js/faker";
 // For a medical research dataset where patient descriptions require medical expertise
 const medicalCaseStudies = await mocky.generate({
   count: 50,
-  prompt: "Generate realistic medical case studies for research purposes with detailed patient histories, symptoms, diagnoses, and treatment outcomes",
+  prompt:
+    "Generate realistic medical case studies for research purposes with detailed patient histories, symptoms, diagnoses, and treatment outcomes",
   customValues: {
     // Simple fields generated with Faker (saves LLM tokens)
     patientId: () => `PT-${faker.string.alphanumeric(8).toUpperCase()}`,
     visitDate: () => faker.date.past({ years: 2 }).toISOString(),
     age: () => faker.number.int({ min: 18, max: 90 }),
     gender: () => faker.person.sex(),
-    bloodPressure: () => `${faker.number.int({ min: 90, max: 180 })}/${faker.number.int({ min: 60, max: 120 })}`,
+    bloodPressure: () =>
+      `${faker.number.int({ min: 90, max: 180 })}/${faker.number.int({
+        min: 60,
+        max: 120,
+      })}`,
     weight: () => faker.number.float({ min: 45, max: 150, precision: 0.1 }),
     height: () => faker.number.float({ min: 150, max: 200, precision: 0.1 }),
-    
+
     // Dynamic values based on the LLM-generated record
     riskScore: (record) => {
       // Calculate risk score based on conditions and symptoms
-      const conditionKeywords = ['diabetes', 'hypertension', 'obesity', 'cancer', 'cardiac'];
+      const conditionKeywords = [
+        "diabetes",
+        "hypertension",
+        "obesity",
+        "cancer",
+        "cardiac",
+      ];
       let score = 0;
-      
+
       // Check if diagnoses contain any high-risk conditions
       if (record.diagnosis) {
-        conditionKeywords.forEach(keyword => {
+        conditionKeywords.forEach((keyword) => {
           if (record.diagnosis.toLowerCase().includes(keyword)) score += 10;
         });
       }
-      
+
       // Add age factor
       score += Math.floor((record.age || 50) / 10);
-      
+
       return Math.min(Math.max(score, 1), 100); // Range 1-100
     },
-    
+
     // Metadata fields
     lastUpdated: () => new Date().toISOString(),
     attendingPhysician: () => `Dr. ${faker.person.lastName()}`,
-    hospitalName: () => faker.helpers.arrayElement([
-      'Metro General Hospital',
-      'Riverside Medical Center',
-      'University Health System',
-      'Memorial Hospital',
-      'Community Care Clinic'
-    ]),
+    hospitalName: () =>
+      faker.helpers.arrayElement([
+        "Metro General Hospital",
+        "Riverside Medical Center",
+        "University Health System",
+        "Memorial Hospital",
+        "Community Care Clinic",
+      ]),
   },
 });
 ```
@@ -243,62 +270,79 @@ Generates mock data according to the schema and options.
 
 #### Returns
 
-- A Promise that resolves to an array of the generated records with the type defined by your schema.
+- A Promise that resolves to an object containing:
+  - `data` - Array of the generated records with the type defined by your schema
+  - `usage` - Token usage and estimated cost
+  - `duplicates` - Duplicate records detected during generation
 
 ## Output Example
 
 For the product review schema demonstrated in the Quick Start, the output might look like:
 
 ```json
-[
-  {
-    "id": "3f8d5e27-4c3b-4a1d-8f9a-6b8d1f2e3c4d",
-    "userId": "9e8d7c6b-5a4e-3f2d-1g0h-9i8j7k6l5m4n",
-    "createdAt": "2025-04-15T14:32:18.721Z",
-    "rating": 4,
-    "productName": "SoundWave Pro X500 Noise-Cancelling Headphones",
-    "reviewTitle": "Impressive Sound Quality but Battery Life Could Be Better",
-    "reviewText": "I've been using the SoundWave Pro X500 headphones for about two weeks now, and I'm genuinely impressed with the sound quality. The bass is deep without being overwhelming, and the noise-cancellation feature works exceptionally well during my commute. The ear cushions are comfortable enough for extended wear, though they do get a bit warm after a couple of hours. My biggest complaint is the battery life - despite the advertised 30 hours, I'm only getting about 22 hours on a single charge with ANC enabled.",
-    "pros": [
-      "Exceptional noise cancellation",
-      "Premium sound quality across all frequencies",
-      "Comfortable fit for most ear sizes",
-      "Quick charging capability (15 min charge = 3 hours playback)"
-    ],
-    "cons": [
-      "Battery life falls short of advertised specs",
-      "Ear cushions get warm during extended use",
-      "Mobile app occasionally disconnects",
-      "Premium price point"
-    ],
-    "sentimentScore": 0.65,
-    "helpfulCount": 247,
-    "replyFromSeller": "Thank you for your detailed review! We're sorry to hear about the battery life issue. Our 30-hour claim is based on 50% volume with ANC enabled. We'd love to troubleshoot this with you - please contact our support team at support@soundwave.example."
+{
+  "data": [
+    {
+      "id": "3f8d5e27-4c3b-4a1d-8f9a-6b8d1f2e3c4d",
+      "userId": "9e8d7c6b-5a4e-3f2d-1g0h-9i8j7k6l5m4n",
+      "createdAt": "2025-04-15T14:32:18.721Z",
+      "rating": 4,
+      "productName": "SoundWave Pro X500 Noise-Cancelling Headphones",
+      "reviewTitle": "Impressive Sound Quality but Battery Life Could Be Better",
+      "reviewText": "I've been using the SoundWave Pro X500 headphones for about two weeks now, and I'm genuinely impressed with the sound quality. The bass is deep without being overwhelming, and the noise-cancellation feature works exceptionally well during my commute. The ear cushions are comfortable enough for extended wear, though they do get a bit warm after a couple of hours. My biggest complaint is the battery life - despite the advertised 30 hours, I'm only getting about 22 hours on a single charge with ANC enabled.",
+      "pros": [
+        "Exceptional noise cancellation",
+        "Premium sound quality across all frequencies",
+        "Comfortable fit for most ear sizes",
+        "Quick charging capability (15 min charge = 3 hours playback)"
+      ],
+      "cons": [
+        "Battery life falls short of advertised specs",
+        "Ear cushions get warm during extended use",
+        "Mobile app occasionally disconnects",
+        "Premium price point"
+      ],
+      "sentimentScore": 0.65,
+      "helpfulCount": 247,
+      "replyFromSeller": "Thank you for your detailed review! We're sorry to hear about the battery life issue. Our 30-hour claim is based on 50% volume with ANC enabled. We'd love to troubleshoot this with you - please contact our support team at support@soundwave.example."
+    },
+    {
+      "id": "7c6f5d4e-3b2a-1f0e-9d8c-7b6a5d4c3b2a",
+      "userId": "1a2b3c4d-5e6f-7g8h-9i0j-1k2l3m4n5o6p",
+      "createdAt": "2025-04-28T09:17:43.129Z",
+      "rating": 5,
+      "productName": "UltraFast X15 Gaming Laptop",
+      "reviewTitle": "Gaming Beast that Exceeded All My Expectations",
+      "reviewText": "After researching gaming laptops for months, I finally pulled the trigger on the UltraFast X15 and couldn't be happier. The 240Hz display is buttery smooth with virtually no ghosting, and the RTX 4080 handles everything I throw at it with ease. I've been playing Cyberpunk 2077 and Elden Ring at max settings and maintaining 100+ FPS consistently. The cooling system is remarkable - even during intense gaming sessions, the keyboard remains comfortable to touch. The RGB lighting is customizable and adds a nice aesthetic touch without being too flashy.",
+      "pros": [
+        "Exceptional gaming performance",
+        "Effective cooling system that keeps temperatures manageable",
+        "Gorgeous display with high refresh rate and accurate colors",
+        "Surprisingly good battery life for everyday tasks",
+        "High-quality build materials"
+      ],
+      "cons": [
+        "Fans can get loud under heavy load",
+        "Slightly bulky compared to ultrabooks",
+        "Premium price point"
+      ],
+      "sentimentScore": 0.92,
+      "helpfulCount": 189
+    }
+  ],
+  "usage": {
+    "totalTokens": 12345,
+    "estimatedCost": 4.5678
   },
-  {
-    "id": "7c6f5d4e-3b2a-1f0e-9d8c-7b6a5d4c3b2a",
-    "userId": "1a2b3c4d-5e6f-7g8h-9i0j-1k2l3m4n5o6p",
-    "createdAt": "2025-04-28T09:17:43.129Z",
-    "rating": 5,
-    "productName": "UltraFast X15 Gaming Laptop",
-    "reviewTitle": "Gaming Beast that Exceeded All My Expectations",
-    "reviewText": "After researching gaming laptops for months, I finally pulled the trigger on the UltraFast X15 and couldn't be happier. The 240Hz display is buttery smooth with virtually no ghosting, and the RTX 4080 handles everything I throw at it with ease. I've been playing Cyberpunk 2077 and Elden Ring at max settings and maintaining 100+ FPS consistently. The cooling system is remarkable - even during intense gaming sessions, the keyboard remains comfortable to touch. The RGB lighting is customizable and adds a nice aesthetic touch without being too flashy.",
-    "pros": [
-      "Exceptional gaming performance",
-      "Effective cooling system that keeps temperatures manageable",
-      "Gorgeous display with high refresh rate and accurate colors",
-      "Surprisingly good battery life for everyday tasks",
-      "High-quality build materials"
+  "duplicates": {
+    "reviewTitle": [
+      "Impressive Sound Quality but Battery Life Could Be Better"
     ],
-    "cons": [
-      "Fans can get loud under heavy load",
-      "Slightly bulky compared to ultrabooks",
-      "Premium price point"
-    ],
-    "sentimentScore": 0.92,
-    "helpfulCount": 189
+    "reviewText": [
+      "I've been using the SoundWave Pro X500 headphones for about two weeks now, and I'm genuinely impressed with the sound quality. The bass is deep without being overwhelming, and the noise-cancellation feature works exceptionally well during my commute. The ear cushions are comfortable enough for extended wear, though they do get a bit warm after a couple of hours. My biggest complaint is the battery life - despite the advertised 30 hours, I'm only getting about 22 hours on a single charge with ANC enabled."
+    ]
   }
-]
+}
 ```
 
 This example demonstrates how the LLM generates contextually rich and detailed product reviews, while Faker handles the simpler structured data like IDs and timestamps.
