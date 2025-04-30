@@ -1,6 +1,6 @@
 {
   "name": "mocky-ai",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "author": "Maziar Shakibaii",
   "license": "MIT",
   "description": "AI-powered mock data generation with Zod schema validation and duplicate detection.",
