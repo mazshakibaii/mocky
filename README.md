@@ -91,13 +91,18 @@ AZURE_BASE_URL="your-azure-base_url"
 
 ### Custom Value Application
 
+> **🟢 TIP**: Use custom values to reduce LLM costs. This is recommended when values are numeric and can be generated programmatically without AI by leveraging libraries such as faker.
+
 Override or extend specific fields in the generated data:
 
 ```typescript
+import { faker } from "@faker-js/faker"
+
 const users = await mocky.generate({
   count: 50,
   customValues: {
     isActive: true, // Set all records to active
+    balance: faker.finance.amount({ min: 0, max: 100_000, dec: 2, symbol: "$" }) // Randomise balance (e.g. "$42,058.72)
     country: "USA", // Add a new field
     createdAt: () => new Date(), // Dynamic value using a function
     roles: (existing) => [...existing, "user"], // Extend existing array values
@@ -118,6 +123,8 @@ const employees = await mocky.generate({
 ```
 
 ### Duplicate Detection
+
+Duplicates are matched via fuzzy search using Fuse.js. This filters duplicates which look similar as well as exact matches.
 
 Control how duplicates are detected and filtered:
 

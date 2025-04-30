@@ -1,6 +1,16 @@
 {
   "name": "mocky-ai",
   "version": "1.1.0",
+  "keywords": [
+    "mock",
+    "mock-data",
+    "ai",
+    "generator",
+    "data",
+    "cli",
+    "typescript",
+    "bun"
+  ],
   "module": "index.ts",
   "type": "module",
   "main": "dist/index.js",
