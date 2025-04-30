@@ -51,15 +51,28 @@ export const generateOptionsSchema: z.ZodObject<
   .strict();
 
 /**
+ * Custom values can be either static values or functions that generate a value
+ * for each record using the typed record schema
+ */
+export type CustomValueOrFunction<T, R> = R | ((record: T) => R);
+
+/**
  * Options for the generate method with typed custom values
  */
 export interface GenerateOptions<
-  C extends Record<string, unknown> = Record<string, unknown>
+  C extends Record<string, unknown> = Record<string, unknown>,
+  T = any
 > {
   /** Number of records to generate (default: 10) */
   count?: number;
-  /** Override/extend generated values with custom field values (default: {}) */
-  customValues?: C;
+  /**
+   * Override/extend generated values with custom field values (default: {})
+   * Values can be static or functions that generate a value for each record
+   * Functions receive the strongly-typed record based on your schema
+   */
+  customValues?: {
+    [K in keyof C]: CustomValueOrFunction<T, C[K]>;
+  };
   /** Optional prompt override (default: undefined) */
   prompt?: string;
   /** Concurrent batches (default: 1) */

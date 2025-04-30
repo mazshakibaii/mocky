@@ -57,7 +57,7 @@ export class Mocky<S extends ZodTypeAny = ZodTypeAny> {
    */
   public async generate<
     C extends Record<string, unknown> = Record<string, never>
-  >(options: GenerateOptions<C> = {}): Promise<(z.infer<S> & C)[]> {
+  >(options: GenerateOptions<C, z.infer<S>> = {}): Promise<(z.infer<S> & C)[]> {
     const generateOpts = generateOptionsSchema.parse(options);
     const {
       format,

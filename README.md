@@ -91,9 +91,9 @@ AZURE_BASE_URL="your-azure-base_url"
 
 ### Custom Value Application
 
-> **🟢 TIP**: Use custom values to reduce LLM costs. This is recommended when values are numeric and can be generated programmatically without AI by leveraging libraries such as faker.
+> **🟢 TIP**: Use custom values to reduce LLM costs. This is recommended when values are numeric or follow patterns that can be generated programmatically without AI.
 
-Override or extend specific fields in the generated data:
+Override or extend specific fields in the generated data with static values or functions:
 
 ```typescript
 import { faker } from "@faker-js/faker"
@@ -101,11 +101,25 @@ import { faker } from "@faker-js/faker"
 const users = await mocky.generate({
   count: 50,
   customValues: {
-    isActive: true, // Set all records to active
-    balance: faker.finance.amount({ min: 0, max: 100_000, dec: 2, symbol: "$" }) // Randomise balance (e.g. "$42,058.72)
-    country: "USA", // Add a new field
-    createdAt: () => new Date(), // Dynamic value using a function
-    roles: (existing) => [...existing, "user"], // Extend existing array values
+    // Static values - same for all records
+    isActive: true,
+    country: "USA",
+    
+    // Function values - executed for each record individually
+    // Great for randomness, timestamps, or derived fields
+    id: () => crypto.randomUUID(), // Generate unique IDs
+    createdAt: () => new Date().toISOString(), // Current timestamp for each record
+    
+    // Functions with access to the current record
+    // The record parameter is strongly typed based on your schema
+    fullName: (record) => `${record.firstName} ${record.lastName}`,
+    username: (record) => `${record.firstName.toLowerCase()}.${record.lastName.toLowerCase()}`,
+    
+    // Use faker for cost-effective generation of specific fields
+    // This avoids paying for LLM tokens for simple pattern-based data
+    creditCardNumber: () => faker.finance.creditCardNumber(),
+    avatar: () => faker.image.avatar(),
+    salary: () => faker.finance.amount({ min: 30000, max: 150000, dec: 0 }),
   },
 });
 ```
