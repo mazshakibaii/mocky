@@ -1,17 +1,10 @@
 {
   "name": "mocky-ai",
   "version": "1.1.0",
-  "keywords": [
-    "mock",
-    "mock-data",
-    "ai",
-    "generator",
-    "data",
-    "cli",
-    "typescript",
-    "bun"
-  ],
-  "module": "index.ts",
+  "author": "Maziar Shakibaii",
+  "license": "MIT",
+  "description": "AI-powered mock data generation with Zod schema validation and duplicate detection.",
+  "module": "dist/index.js",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -38,5 +31,27 @@
     "cli-progress": "^3.12.0",
     "fuse.js": "^7.1.0",
     "zod": "^3.24.3"
-  }
+  },
+  "keywords": [
+    "mock",
+    "mock-data",
+    "ai",
+    "generator",
+    "data",
+    "cli",
+    "typescript",
+    "bun"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mazshakibaii/mocky.git"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ]
 }
