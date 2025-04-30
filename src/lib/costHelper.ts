@@ -27,16 +27,16 @@ export const modelCost: ModelCostMap = {
  * @param {string} model - The name of the model to calculate the cost for.
  * @param {number} promptTokens - The number of prompt tokens used.
  * @param {number} completionTokens - The number of completion tokens used.
- * @returns {number} The total cost calculated for the given tokens and model.
+ * @returns {number | null} The total cost calculated for the given tokens and model, or null if the model is not supported.
  */
 export const calculateTotalCost = (
   model: string,
   promptTokens: number,
   completionTokens: number
-): number => {
+): number | null => {
   const modelCostData = modelCost[model];
   if (!modelCostData) {
-    throw new Error(`Model ${model} not found`);
+    return null;
   }
 
   // Costs are per 1 million tokens, so divide tokens by 1,000,000

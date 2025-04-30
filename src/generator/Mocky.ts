@@ -282,7 +282,12 @@ Duplicate check:    ${
         ? `${(totalSeconds / 60).toFixed(2)} minutes`
         : `${totalSeconds.toFixed(2)} seconds`;
     const formattedAvgTime = `${avgSecondsPerRecord.toFixed(2)} seconds`;
-    const formattedTotalCost = `$${totalCost.toFixed(4)}`;
+    const formattedTotalCost =
+      totalCost !== null
+        ? `$${totalCost.toFixed(
+            4
+          )} USD (est. - does not include cache discounts)`
+        : "N/A - model not supported for cost calculation";
 
     if (totalBatchFailures > 0) {
       log.warn(
@@ -297,7 +302,7 @@ Avg time per record: ${formattedAvgTime}
 Total tokens:        ${(
         totalPromptTokens + totalCompletionTokens
       ).toLocaleString()} (${totalPromptTokens.toLocaleString()} prompt, ${totalCompletionTokens.toLocaleString()} completion)
-Total cost:          ${formattedTotalCost} USD (est. - does not include cache discounts)
+Total cost:          ${formattedTotalCost}
 
 Generated:           ${count} records
 Duplicates filtered: ${totalDuplicatesFiltered} records
