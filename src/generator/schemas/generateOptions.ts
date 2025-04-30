@@ -50,5 +50,28 @@ export const generateOptionsSchema: z.ZodObject<
   })
   .strict();
 
-export type GenerateOptions = z.input<typeof generateOptionsSchema>;
+/**
+ * Options for the generate method with typed custom values
+ */
+export interface GenerateOptions<
+  C extends Record<string, unknown> = Record<string, unknown>
+> {
+  /** Number of records to generate (default: 10) */
+  count?: number;
+  /** Override/extend generated values with custom field values (default: {}) */
+  customValues?: C;
+  /** Optional prompt override (default: undefined) */
+  prompt?: string;
+  /** Concurrent batches (default: 1) */
+  concurrency?: number;
+  /** Records per batch (default: 10) */
+  batchSize?: number;
+  /** Where to write output (default: "./output.json") */
+  outputPath?: string;
+  /** File format (default: "json", options: "json" | "csv") */
+  format?: "json" | "csv";
+  /** Fields to check for duplicates (default: false) */
+  dupeCheck?: string | string[] | false;
+}
+
 export type ParsedGenerateOptions = z.output<typeof generateOptionsSchema>;

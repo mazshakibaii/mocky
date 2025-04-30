@@ -53,9 +53,11 @@ export class Mocky<S extends ZodTypeAny = ZodTypeAny> {
    * @param options.outputPath Where to write output (default: "./output.json")
    * @param options.format File format (default: "json")
    * @param options.dupeCheck Fields to check for duplicates (default: false)
-   * @returns Array of generated records
+   * @returns Array of generated records with custom values applied
    */
-  public async generate(options: GenerateOptions = {}): Promise<z.infer<S>[]> {
+  public async generate<
+    C extends Record<string, unknown> = Record<string, never>
+  >(options: GenerateOptions<C> = {}): Promise<(z.infer<S> & C)[]> {
     const generateOpts = generateOptionsSchema.parse(options);
     const {
       format,
