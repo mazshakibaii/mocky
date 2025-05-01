@@ -132,7 +132,17 @@ export function filterDuplicates<T extends Record<string, any>>(
     return batch;
   }
 
-  return batch.filter(
-    (record) => !isDuplicate(record, existingRecords, duplicateConfig)
-  );
+  // Process batch to check against existing records and other records in the same batch
+  const result: T[] = [];
+
+  for (const record of batch) {
+    // Check against both existing records AND already accepted records from this batch
+    const recordsToCheckAgainst = [...existingRecords, ...result];
+
+    if (!isDuplicate(record, recordsToCheckAgainst, duplicateConfig)) {
+      result.push(record);
+    }
+  }
+
+  return result;
 }

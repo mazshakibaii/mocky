@@ -176,6 +176,12 @@ Duplicate check:    ${
         Math.ceil(remainingCount / batchSize)
       );
 
+      // If this isn't the first batch round, add a delay between concurrent rounds
+      // This applies a delay between rounds of concurrent generation rather than between each batch
+      if (batchCount > 1) {
+        await new Promise((r) => setTimeout(r, 500)); // 500ms delay between concurrent rounds
+      }
+
       // Generate multiple batches in parallel based on concurrency
       const batchPromises: Promise<{
         data: z.infer<S>[];
@@ -183,10 +189,14 @@ Duplicate check:    ${
         completionTokens: number;
       }>[] = [];
 
+      // Create batch promises without individual delays (true concurrency)
       for (let i = 0; i < batchesToGenerate; i++) {
-        batchPromises.push(
-          generateBatch(this.opts, this.opts.schema as S, generateOpts)
+        const promise = generateBatch(
+          this.opts,
+          this.opts.schema as S,
+          generateOpts
         );
+        batchPromises.push(promise);
       }
 
       // Wait for all batches to complete
@@ -231,32 +241,36 @@ Duplicate check:    ${
 
       // Process duplicates and track them
       let newRecords: z.infer<S>[] = [];
-      for (const batch of batches) {
-        // Capture duplicates before filtering
-        if (effectiveDuplicateConfig && "values" in effectiveDuplicateConfig) {
-          batch.forEach((record) => {
-            fieldsToCheck.forEach((field) => {
-              if (
-                field in record &&
-                typeof record[field as keyof typeof record] === "string" &&
-                isDuplicate(record, this.generatedData, field)
-              ) {
-                const value = record[field as keyof typeof record] as string;
-                if (!duplicatesMap[field].includes(value)) {
-                  duplicatesMap[field].push(value);
-                }
-              }
-            });
-          });
-        }
 
-        const uniqueRecords = filterDuplicates(
-          batch,
-          this.generatedData,
-          effectiveDuplicateConfig
-        );
-        newRecords = [...newRecords, ...uniqueRecords];
+      // Create a combined array with all batch records for cross-batch duplicate checking
+      const allBatchRecords = batches.flat();
+
+      // First, capture potential duplicates for tracking purposes
+      if (effectiveDuplicateConfig && "values" in effectiveDuplicateConfig) {
+        allBatchRecords.forEach((record) => {
+          fieldsToCheck.forEach((field) => {
+            if (
+              field in record &&
+              typeof record[field as keyof typeof record] === "string" &&
+              isDuplicate(record, this.generatedData, field)
+            ) {
+              const value = record[field as keyof typeof record] as string;
+              if (!duplicatesMap[field].includes(value)) {
+                duplicatesMap[field].push(value);
+              }
+            }
+          });
+        });
       }
+
+      // Now process all batches as a single unit to avoid cross-batch duplicates
+      const uniqueRecords = filterDuplicates(
+        allBatchRecords,
+        this.generatedData,
+        effectiveDuplicateConfig
+      );
+
+      newRecords = uniqueRecords;
 
       // Calculate duplicates filtered in this batch
       const batchDuplicatesFiltered = totalBatchRecords - newRecords.length;
