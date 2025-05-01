@@ -129,71 +129,71 @@ AZURE_BASE_URL="your-azure-base_url"
 
 ### Custom Value Application
 
-> **🟢 TIP**: Use custom values with Faker for simple pattern-based data to reduce LLM costs, while letting the LLM generate complex, contextual content.
+> **🟢 TIP**: Use custom values for simple pattern-based data to reduce LLM costs, letting AI focus on generating complex, contextual content.
 
-Override or extend specific fields in the generated data with static values or functions:
+Apply custom values to enrich your generated data:
 
 ```typescript
+import { z } from "zod";
+import { createMocky } from "mocky";
 import { faker } from "@faker-js/faker";
 
-// For a medical research dataset where patient descriptions require medical expertise
-const medicalCaseStudies = await mocky.generate({
-  count: 50,
+// Define a schema where AI adds unique value through complex content
+const researchPaperSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  abstract: z.string().min(100),
+  authors: z.array(
+    z.object({
+      name: z.string(),
+      affiliation: z.string(),
+      email: z.string().email(),
+    })
+  ),
+  keywords: z.array(z.string()),
+  content: z.object({
+    introduction: z.string(),
+    methodology: z.string(),
+    findings: z.string(),
+    discussion: z.string(),
+    conclusion: z.string(),
+  }),
+  citations: z.number().int(),
+  publicationDate: z.string().datetime(),
+  journal: z.string(),
+  doi: z.string(),
+  category: z.enum(["AI", "Biology", "Chemistry", "Physics", "Psychology"]),
+});
+
+// Create a Mocky instance
+const mocky = createMocky({ schema: researchPaperSchema });
+
+// Generate research papers with custom values
+const papers = await mocky.generate({
+  count: 10,
   prompt:
-    "Generate realistic medical case studies for research purposes with detailed patient histories, symptoms, diagnoses, and treatment outcomes",
+    "Generate realistic academic research papers focused on artificial intelligence and machine learning breakthroughs",
+
+  // Use custom values only for simple pattern-based data
   customValues: {
-    // Simple fields generated with Faker (saves LLM tokens)
-    patientId: () => `PT-${faker.string.alphanumeric(8).toUpperCase()}`,
-    visitDate: () => faker.date.past({ years: 2 }).toISOString(),
-    age: () => faker.number.int({ min: 18, max: 90 }),
-    gender: () => faker.person.sex(),
-    bloodPressure: () =>
-      `${faker.number.int({ min: 90, max: 180 })}/${faker.number.int({
-        min: 60,
-        max: 120,
-      })}`,
-    weight: () => faker.number.float({ min: 45, max: 150, precision: 0.1 }),
-    height: () => faker.number.float({ min: 150, max: 200, precision: 0.1 }),
+    id: () => faker.string.uuid(),
+    doi: () =>
+      `10.${faker.number.int({
+        min: 1000,
+        max: 9999,
+      })}/science.${faker.string.alphanumeric(8)}`,
+    publicationDate: () => faker.date.past({ years: 5 }).toISOString(),
+    citations: () => faker.number.int({ min: 0, max: 500 }),
 
-    // Dynamic values based on the LLM-generated record
-    riskScore: (record) => {
-      // Calculate risk score based on conditions and symptoms
-      const conditionKeywords = [
-        "diabetes",
-        "hypertension",
-        "obesity",
-        "cancer",
-        "cardiac",
-      ];
-      let score = 0;
-
-      // Check if diagnoses contain any high-risk conditions
-      if (record.diagnosis) {
-        conditionKeywords.forEach((keyword) => {
-          if (record.diagnosis.toLowerCase().includes(keyword)) score += 10;
-        });
-      }
-
-      // Add age factor
-      score += Math.floor((record.age || 50) / 10);
-
-      return Math.min(Math.max(score, 1), 100); // Range 1-100
-    },
-
-    // Metadata fields
-    lastUpdated: () => new Date().toISOString(),
-    attendingPhysician: () => `Dr. ${faker.person.lastName()}`,
-    hospitalName: () =>
-      faker.helpers.arrayElement([
-        "Metro General Hospital",
-        "Riverside Medical Center",
-        "University Health System",
-        "Memorial Hospital",
-        "Community Care Clinic",
-      ]),
+    // Let the LLM generate the complex, high-value content:
+    // - title, abstract, authors with affiliations
+    // - keywords, all content sections
+    // - journal name, category
   },
 });
 ```
+
+This approach uses Faker for simple identifiers and metrics while letting the AI focus on generating the substantive research content that requires specialized knowledge and creativity.
 
 ### Custom Prompt
 
@@ -209,29 +209,31 @@ const employees = await mocky.generate({
 
 ### Duplicate Detection
 
-Duplicates are matched via fuzzy search using Fuse.js. This filters duplicates which look similar as well as exact matches.
+Mocky uses Fuse.js for intelligent semantic similarity detection, helping ensure diversity in your generated datasets by filtering out both exact matches and content that's too similar.
 
-Control how duplicates are detected and filtered:
+Control how duplicates are detected with flexible configuration options:
 
 ```typescript
-// Check a single field
+// Modern format with object configuration
 const products = await mocky.generate({
   count: 30,
-  dupeCheck: "name", // Check product names for duplicates
+  duplicates: {
+    values: "name", // Single field to check
+    threshold: 0.3, // Optional similarity threshold (default: 0.3)
+  },
 });
 
 // Check multiple fields
 const orders = await mocky.generate({
   count: 100,
-  dupeCheck: ["customerId", "productId", "orderDate"], // Composite uniqueness check
-});
-
-// Disable duplicate checking (may result in duplicates)
-const logs = await mocky.generate({
-  count: 500,
-  dupeCheck: false,
+  duplicates: {
+    values: ["reviewTitle", "reviewText"], // Array of fields to check
+    threshold: 0.3,
+  },
 });
 ```
+
+Duplicate detection works by comparing string fields using fuzzy matching. The system tracks filtered duplicates and automatically adjusts generation parameters if too many duplicates are being produced, helping you achieve the desired dataset size.
 
 ## API Reference
 
